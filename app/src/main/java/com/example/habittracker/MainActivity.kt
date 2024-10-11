@@ -47,7 +47,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun ContentApp(){
+fun ContentApp(){ //Whole content in the scaffold is stored here, Ui and Ux
     Scaffold(modifier = Modifier.fillMaxSize(), //main container of the app
         floatingActionButton = {
             FloatingActionButton(
@@ -69,7 +69,7 @@ fun ContentApp(){
 @Composable
 fun HabitStreak() {
     Row(){
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(4.dp),
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(4.dp), //
             ){
             items(count = 7){
                 Card(
