@@ -31,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.habittracker.ui.theme.HabitTrackerTheme
 
 class MainActivity : ComponentActivity() {
@@ -58,7 +59,8 @@ fun ContentApp(){ //Whole content in the scaffold is stored here, Ui and Ux
         }
 
     ) { innerPadding ->
-        Column(modifier = Modifier.padding(innerPadding)
+        Column(modifier = Modifier
+            .padding(innerPadding)
             .padding(16.dp)
         ) {
             HabitStreak()
@@ -68,10 +70,11 @@ fun ContentApp(){ //Whole content in the scaffold is stored here, Ui and Ux
 
 @Composable
 fun HabitStreak() {
+    var calendar = CalendarManagement()
     Row(){
         LazyRow(horizontalArrangement = Arrangement.spacedBy(4.dp), //
             ){
-            items(count = 7){
+            items(count = 7){ index->
                 Card(
                     modifier = Modifier
                         .padding(vertical = 4.dp, horizontal = 4.dp),
@@ -86,12 +89,14 @@ fun HabitStreak() {
                             .padding(4.dp)
                     ) {
                         Text(
-                            text = "day",
+                            text = calendar.thisDaysWeeks[index],
                            modifier = Modifier.align(Alignment.CenterHorizontally),
-                            style = MaterialTheme.typography.bodySmall
+                            style = MaterialTheme.typography.bodySmall,
+
+
                         )
                         Text(
-                            text = "date",
+                            text = "${calendar.thisDaysMonths[index]}",
                             modifier = Modifier.align(Alignment.CenterHorizontally),
                             style = MaterialTheme.typography.bodyMedium,
                         )
