@@ -71,7 +71,7 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun ContentApp(){ //Whole content in the scaffold is stored here, Ui and Ux
-    var isAddHabitsMenuVisible  by remember { mutableStateOf(true) }
+    var isAddHabitsMenuVisible  by remember { mutableStateOf(false) }
     Scaffold(modifier = Modifier.fillMaxSize(), //main container of the app
         floatingActionButton = {
             FloatingActionButton(
