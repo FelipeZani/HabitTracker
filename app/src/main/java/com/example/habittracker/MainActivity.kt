@@ -1,7 +1,10 @@
 package com.example.habittracker
+import android.content.Context
+import com.example.habittracker.database.DataBaseHelper.*
 
 import android.os.Bundle
 import android.service.autofill.OnClickAction
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -51,27 +54,38 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.habittracker.database.DataBaseHelper
+import com.example.habittracker.database.DataBaseHelper.Companion.DB_NAME
+import com.example.habittracker.database.DataBaseHelper.Companion.DB_VERSION
+import com.example.habittracker.database.HabitModel
 import com.example.habittracker.ui.theme.HabitTrackerTheme
 
 class MainActivity : ComponentActivity() {
+    val databaseHabits : DataBaseHelper = DataBaseHelper(this)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
             HabitTrackerTheme {
-                ContentApp()
+                ContentApp(databaseHabits)
 
             }
         }
+
+    }
+    override fun onDestroy() {
+        super.onDestroy()
+        databaseHabits.close() // Closes the database when the activity is destroyed
     }
 }
 
 @Composable
-fun ContentApp(){ //Whole content in the scaffold is stored here, Ui and Ux
-    var isAddHabitsMenuVisible  by remember { mutableStateOf(false) }
+fun ContentApp(databaseHabits: DataBaseHelper){ //Whole content in the scaffold is stored here, Ui and Ux
+    var isAddHabitsMenuVisible  by remember { mutableStateOf(true) }
     Scaffold(modifier = Modifier.fillMaxSize(), //main container of the app
         floatingActionButton = {
             FloatingActionButton(
@@ -92,7 +106,7 @@ fun ContentApp(){ //Whole content in the scaffold is stored here, Ui and Ux
         }
     }
     if(isAddHabitsMenuVisible){
-        HandleHabitsMenu(onDismiss = {isAddHabitsMenuVisible = false})
+        HandleHabitsMenu(databaseHabits,onDismiss = {isAddHabitsMenuVisible = false})
 
     }
 }
@@ -166,62 +180,74 @@ fun HabitStreak() {
 }
 
 @Composable
-fun HandleHabitsMenu(onDismiss: () -> Unit){ // UI of the habits list available to add to the user's habit list
+fun HandleHabitsMenu(databaseHabits:DataBaseHelper,onDismiss: () -> Unit){ // UI of the habits list available to add to the user's habit list
+    val habitsArrayList : ArrayList<HabitModel>? = databaseHabits.readHabits()
 
-        Box(
+    if(habitsArrayList == null){
+        Toast.makeText(LocalContext.current,"Empty database",Toast.LENGTH_LONG).show()
+        return
+    }
+    Box(
+        modifier = Modifier
+            .background(Color.Transparent)
+            .fillMaxSize()
+            .clickable(
+                onClick = { onDismiss() }
+            )
+    ) {
+        ElevatedCard(
+            elevation = CardDefaults.cardElevation(
+                defaultElevation = 10.dp
+            ),
             modifier = Modifier
-                .background(Color.Transparent)
-                .fillMaxSize()
-                .clickable(
-                    onClick = { onDismiss() }
-                )
+                .fillMaxHeight(0.8f)
+                .fillMaxWidth()
+                .align(Alignment.BottomCenter),
+
+            shape = RoundedCornerShape(35.dp, 35.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = Color.White
+            )
+
         ) {
-            ElevatedCard(
-                elevation = CardDefaults.cardElevation(
-                    defaultElevation = 10.dp
-                ),
-                modifier = Modifier
-                    .fillMaxHeight(0.8f)
-                    .fillMaxWidth()
-                    .align(Alignment.BottomCenter),
-
-                shape = RoundedCornerShape(35.dp, 35.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color.White
-                )
-
-            ) {
-                LazyColumn(modifier = Modifier.padding(top = 30.dp).fillMaxWidth()
+            LazyColumn(modifier = Modifier
+                .padding(top = 30.dp)
+                .fillMaxWidth()
+                ) {
+                items(habitsArrayList.size){ index->
+                    Row(
+                        modifier = Modifier
+                            .wrapContentWidth()
+                            .padding(start = 20.dp)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() }, // Prevent ripple effect
+                                indication = null, // Remove visual feedback
+                                onClick = { /* Do nothing, just consume the click */ }
+                            ),
+                        horizontalArrangement = Arrangement.spacedBy(90.dp)
                     ) {
-                    items(100){
-                        Row(
-                            modifier = Modifier.wrapContentWidth()
-                                .padding(start = 20.dp)
-                                .clickable(
-                                    interactionSource = remember { MutableInteractionSource() }, // Prevent ripple effect
-                                    indication = null, // Remove visual feedback
-                                    onClick = { /* Do nothing, just consume the click */ }
-                                ),
-                            horizontalArrangement = Arrangement.spacedBy(90.dp)
-                        ) {
-                            Text(
-                                "Hello",
-                                fontSize = 30.sp
-                            )
-                            Button(onClick = {}) { Text("Add") }
-                        }
+                        Text(
+                            "${habitsArrayList[index].habitName}",
+                            fontSize = 30.sp
+                        )
+                        Button(onClick = {}) { Text("Add") }
                     }
                 }
-
             }
+
         }
+    }
 
 
 
 }
-
 @Preview(showSystemUi = true)
 @Composable
-fun ShowContent() {
-    ContentApp()
+fun ShowContentPreview() {
+    // Create a mock or default instance of DataBaseHelper if needed
+    val mockDatabaseHelper = DataBaseHelper(LocalContext.current)
+
+    HabitTrackerTheme {
+        ContentApp(databaseHabits = mockDatabaseHelper)
+    }
 }

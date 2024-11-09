@@ -2,8 +2,12 @@ package com.example.habittracker.database
 
 import android.content.ContentValues
 import android.content.Context
+import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.Calendar
 
 class DataBaseHelper(context: Context?) : SQLiteOpenHelper(context, DB_NAME, null, DB_VERSION) {
 
@@ -28,6 +32,16 @@ class DataBaseHelper(context: Context?) : SQLiteOpenHelper(context, DB_NAME, nul
 
         db?.execSQL(habitsQuery)
         db?.execSQL(streakQuery)
+
+        //insert default habits
+        insertDefaultHabits(db)
+    }
+
+    private fun insertDefaultHabits(db: SQLiteDatabase?) {
+        addNewHabit("Drink Water",true,currentDate(),null,db)
+        addNewHabit("Workout",true,currentDate(),null,db)
+        addNewHabit("Read a book",true,currentDate(),null,db)
+        addNewHabit("Study",true,currentDate(),null,db)
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
@@ -57,30 +71,62 @@ class DataBaseHelper(context: Context?) : SQLiteOpenHelper(context, DB_NAME, nul
     fun addNewHabit(habitsName : String,
                      defaultHabit : Boolean = true,
                      creationDate: String,
-                     recalDate : String?
+                     recalDate : String?,
+                    db: SQLiteDatabase?
     ){
-        val db = this.writableDatabase
         val values = ContentValues()
+        if(db != null) {
+            values.put(HABIT_NAME, habitsName)
+            values.put(DEFAULT_HABIT, defaultHabit)
+            values.put(CREATE_AT, creationDate)
+            values.put(RECALLTIME, recalDate)
 
-        values.put(HABITS_TABLE, habitsName)
-        values.put(DEFAULT_HABIT, defaultHabit)
-        values.put(CREATE_AT, creationDate)
-        values.put(RECALLTIME, recalDate)
-
-        db.insert(HABITS_TABLE,null, values)
-        db.close()
+            db.insert(HABITS_TABLE, null, values)
+        }
     }
-    fun addNewStreak(
+    fun addNewStreak( db:SQLiteDatabase?,
         dateAcomplieshed : String?
     ){
-        val db = this.writableDatabase
         val values = ContentValues()
+        if(db != null) {
+            values.put(DATE_ACCOMPLISHED, dateAcomplieshed)
 
-        values.put(DATE_ACCOMPLISHED,dateAcomplieshed)
+            db.insert(STREAK_TABLE, null, values)
 
-        db.insert(STREAK_TABLE, null, values)
-
-        db.close()
+        }
 
     }
+    fun readHabits() : ArrayList<HabitModel>?{
+        val db = this.readableDatabase
+
+        val cursorHabits : Cursor = db.rawQuery("SELECT * FROM  $HABITS_TABLE",null)
+
+        val habitModelArrayList : ArrayList<HabitModel> = ArrayList()
+        if(cursorHabits.moveToFirst()){
+            do {
+                habitModelArrayList.add(
+                    HabitModel(cursorHabits.getString(1),
+                        cursorHabits.getInt(2) == 1,
+                        cursorHabits.getString(3),
+                        cursorHabits.getString(4)
+
+                    )
+
+                )
+            }while (cursorHabits.moveToNext())
+        }
+
+        cursorHabits.close()
+        return habitModelArrayList
+    }
+
+}
+
+fun currentDate():String{
+    val date = LocalDate.now()
+    val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+    val formattedDate = date.format(formatter).toString()
+
+    return formattedDate
+
 }
