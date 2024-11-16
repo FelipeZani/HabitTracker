@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -55,6 +56,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -71,7 +73,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             HabitTrackerTheme {
-                ContentApp(databaseHabits)
+                ContentApp(databaseHabits.readHabits())
 
             }
         }
@@ -84,7 +86,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun ContentApp(databaseHabits: DataBaseHelper){ //Whole content in the scaffold is stored here, Ui and Ux
+fun ContentApp(habitsData: ArrayList<HabitModel>?){ //Whole content in the scaffold is stored here, Ui and Ux
     var isAddHabitsMenuVisible  by remember { mutableStateOf(true) }
     Scaffold(modifier = Modifier.fillMaxSize(), //main container of the app
         floatingActionButton = {
@@ -99,6 +101,8 @@ fun ContentApp(databaseHabits: DataBaseHelper){ //Whole content in the scaffold 
         Column(modifier = Modifier
             .padding(innerPadding)
             .padding(16.dp)
+            .fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             HabitStreak()
 
@@ -106,7 +110,7 @@ fun ContentApp(databaseHabits: DataBaseHelper){ //Whole content in the scaffold 
         }
     }
     if(isAddHabitsMenuVisible){
-        HandleHabitsMenu(databaseHabits,onDismiss = {isAddHabitsMenuVisible = false})
+        HandleHabitsMenu(habitsData,onDismiss = {isAddHabitsMenuVisible = false})
 
     }
 }
@@ -144,8 +148,10 @@ fun HabitStreak() {
             )
         }
 
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(4.dp),
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(space = 4.dp,
+                alignment = Alignment.CenterHorizontally),
                 modifier = Modifier.padding(bottom = 30.dp)
+                    .fillMaxWidth()
         ) { //handle the UI of the calendar
             items(count = 7) { index ->
                 Card(
@@ -180,9 +186,7 @@ fun HabitStreak() {
 }
 
 @Composable
-fun HandleHabitsMenu(databaseHabits:DataBaseHelper,onDismiss: () -> Unit){ // UI of the habits list available to add to the user's habit list
-    val habitsArrayList : ArrayList<HabitModel>? = databaseHabits.readHabits()
-
+fun HandleHabitsMenu(habitsArrayList:ArrayList<HabitModel>?,onDismiss: () -> Unit){ // UI of the habits list available to add to the user's habit list
     if(habitsArrayList == null){
         Toast.makeText(LocalContext.current,"Empty database",Toast.LENGTH_LONG).show()
         return
@@ -224,30 +228,79 @@ fun HandleHabitsMenu(databaseHabits:DataBaseHelper,onDismiss: () -> Unit){ // UI
                                 indication = null, // Remove visual feedback
                                 onClick = { /* Do nothing, just consume the click */ }
                             ),
-                        horizontalArrangement = Arrangement.spacedBy(90.dp)
                     ) {
                         Text(
-                            "${habitsArrayList[index].habitName}",
-                            fontSize = 30.sp
+                            habitsArrayList[index].habitName,
+                            fontSize = 30.sp,
+                            modifier = Modifier.weight(0.5f)
                         )
-                        Button(onClick = {}) { Text("Add") }
+                        Icon(
+                            modifier = Modifier.size(50.dp)
+                                                .clickable {  },
+                            painter = painterResource(id = R.drawable.clock),
+                            tint = Color.Unspecified,
+                            contentDescription = "clockIcon")
+
+
+                        Button(
+                            onClick = {
+
+                            },
+                            modifier = Modifier.padding(end = 20.dp)
+
+                        ) {
+                            Text(
+                                text = "Add",
+                            )
+
+                        }
                     }
                 }
             }
 
         }
     }
-
-
-
 }
+
+
+
 @Preview(showSystemUi = true)
 @Composable
 fun ShowContentPreview() {
     // Create a mock or default instance of DataBaseHelper if needed
-    val mockDatabaseHelper = DataBaseHelper(LocalContext.current)
 
     HabitTrackerTheme {
-        ContentApp(databaseHabits = mockDatabaseHelper)
+        ContentApp(MockDataProvider.getMockHabits())
     }
+}
+
+
+
+object MockDataProvider {
+    fun getMockHabits(): ArrayList<HabitModel> = arrayListOf(
+        HabitModel(
+            habitName = "Drink Water",
+            defaultHabit = true,
+            creationDate = "2024-03-11",
+            recalDate = null
+        ),
+        HabitModel(
+            habitName = "Workout",
+            defaultHabit = true,
+            creationDate = "2024-03-11",
+            recalDate = null
+        ),
+        HabitModel(
+            habitName = "Read a book",
+            defaultHabit = true,
+            creationDate = "2024-03-11",
+            recalDate = null
+        ),
+        HabitModel(
+            habitName = "Study",
+            defaultHabit = true,
+            creationDate = "2024-03-11",
+            recalDate = null
+        )
+    )
 }
