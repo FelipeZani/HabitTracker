@@ -18,7 +18,9 @@ class DataBaseHelper(context: Context?) : SQLiteOpenHelper(context, DB_NAME, nul
                 $HABIT_NAME TEXT,
                 $DEFAULT_HABIT BOOLEAN,
                 $CREATE_AT TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                $RECALLTIME TIME
+                $RECALLTIME TIME,
+                $PICKED_UP BOOLEAN
+                
             )
         """
         val streakQuery = """ 
@@ -38,10 +40,11 @@ class DataBaseHelper(context: Context?) : SQLiteOpenHelper(context, DB_NAME, nul
     }
 
     private fun insertDefaultHabits(db: SQLiteDatabase?) {
-        addNewHabit("Drink Water",true,currentDate(),null,db)
-        addNewHabit("Workout",true,currentDate(),null,db)
-        addNewHabit("Read a book",true,currentDate(),null,db)
-        addNewHabit("Study",true,currentDate(),null,db)
+        addNewHabit("Drink Water",true,currentDate(),null,false,db)
+        addNewHabit("Workout",true,currentDate(),null,false,db)
+        addNewHabit("Read a book",true,currentDate(),null,false,db)
+        addNewHabit("Study",true,currentDate(),null,false,db)
+
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
@@ -52,7 +55,7 @@ class DataBaseHelper(context: Context?) : SQLiteOpenHelper(context, DB_NAME, nul
 
     companion object {
         const val DB_NAME = "HabitTrackerDB"
-        const val DB_VERSION = 1
+        const val DB_VERSION = 2
 
         // Habits Table Columns
         const val HABITS_TABLE = "habitsTable"
@@ -61,6 +64,7 @@ class DataBaseHelper(context: Context?) : SQLiteOpenHelper(context, DB_NAME, nul
         const val DEFAULT_HABIT = "defaultHabit"
         const val CREATE_AT = "createdAt"
         const val RECALLTIME = "recallTime"
+        const val PICKED_UP ="pickedUp"
 
         // Streaks Table Columns
         const val STREAK_TABLE = "streakTable"
@@ -72,6 +76,7 @@ class DataBaseHelper(context: Context?) : SQLiteOpenHelper(context, DB_NAME, nul
                      defaultHabit : Boolean = true,
                      creationDate: String,
                      recalDate : String?,
+                    pickedUp : Boolean = false,
                     db: SQLiteDatabase?
     ){
         val values = ContentValues()
@@ -80,6 +85,7 @@ class DataBaseHelper(context: Context?) : SQLiteOpenHelper(context, DB_NAME, nul
             values.put(DEFAULT_HABIT, defaultHabit)
             values.put(CREATE_AT, creationDate)
             values.put(RECALLTIME, recalDate)
+            values.put(PICKED_UP, pickedUp)
 
             db.insert(HABITS_TABLE, null, values)
         }
@@ -105,10 +111,12 @@ class DataBaseHelper(context: Context?) : SQLiteOpenHelper(context, DB_NAME, nul
         if(cursorHabits.moveToFirst()){
             do {
                 habitModelArrayList.add(
-                    HabitModel(cursorHabits.getString(1),
+                    HabitModel(
+                        cursorHabits.getString(1),
                         cursorHabits.getInt(2) == 1,
                         cursorHabits.getString(3),
-                        cursorHabits.getString(4)
+                        cursorHabits.getString(4),
+                        cursorHabits.getInt(5)==1
 
                     )
 

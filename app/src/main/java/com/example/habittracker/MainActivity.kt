@@ -234,13 +234,6 @@ fun HandleHabitsMenu(habitsArrayList:ArrayList<HabitModel>?,onDismiss: () -> Uni
                             fontSize = 30.sp,
                             modifier = Modifier.weight(0.5f)
                         )
-                        Icon(
-                            modifier = Modifier.size(50.dp)
-                                                .clickable {  },
-                            painter = painterResource(id = R.drawable.clock),
-                            tint = Color.Unspecified,
-                            contentDescription = "clockIcon")
-
 
                         Button(
                             onClick = {
@@ -282,25 +275,32 @@ object MockDataProvider {
             habitName = "Drink Water",
             defaultHabit = true,
             creationDate = "2024-03-11",
-            recalDate = null
+            recalDate = null,
+            pickedUp=true
         ),
         HabitModel(
             habitName = "Workout",
             defaultHabit = true,
             creationDate = "2024-03-11",
-            recalDate = null
+            recalDate = null,
+            pickedUp=true
+
         ),
         HabitModel(
             habitName = "Read a book",
             defaultHabit = true,
             creationDate = "2024-03-11",
-            recalDate = null
+            recalDate = null,
+            pickedUp=true
+
         ),
         HabitModel(
             habitName = "Study",
             defaultHabit = true,
             creationDate = "2024-03-11",
-            recalDate = null
+            recalDate = null,
+            pickedUp=true
+
         )
     )
 }
