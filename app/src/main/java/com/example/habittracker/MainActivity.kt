@@ -64,6 +64,7 @@ import com.example.habittracker.database.DataBaseHelper
 import com.example.habittracker.database.DataBaseHelper.Companion.DB_NAME
 import com.example.habittracker.database.DataBaseHelper.Companion.DB_VERSION
 import com.example.habittracker.database.HabitModel
+import com.example.habittracker.ui.theme.DarkTransparent
 import com.example.habittracker.ui.theme.HabitTrackerTheme
 
 class MainActivity : ComponentActivity() {
@@ -88,29 +89,32 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun ContentApp(habitsData: ArrayList<HabitModel>?){ //Whole content in the scaffold is stored here, Ui and Ux
     var isAddHabitsMenuVisible  by remember { mutableStateOf(true) }
-    Scaffold(modifier = Modifier.fillMaxSize(), //main container of the app
+    var habitsOnMenu  = arrayListOf<HabitModel>()
+
+    Scaffold(
+        modifier = Modifier.fillMaxSize(), //main container of the app
         floatingActionButton = {
             FloatingActionButton(
             onClick = {isAddHabitsMenuVisible = !isAddHabitsMenuVisible}
             ){
                 Icon(imageVector = Icons.Default.Add, contentDescription = "Open a menu to add an new habit")
             }
-        }
+        },
 
-    ) { innerPadding ->
+    ) {
+        innerPadding ->
         Column(modifier = Modifier
             .padding(innerPadding)
             .padding(16.dp)
             .fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             HabitStreak()
-
-
+            HabitMenu()
         }
+
     }
     if(isAddHabitsMenuVisible){
-        HandleHabitsMenu(habitsData,onDismiss = {isAddHabitsMenuVisible = false})
+        AddHabitsToMenu(habitsData,onDismiss = {isAddHabitsMenuVisible = false})
 
     }
 }
@@ -150,7 +154,8 @@ fun HabitStreak() {
 
         LazyRow(horizontalArrangement = Arrangement.spacedBy(space = 4.dp,
                 alignment = Alignment.CenterHorizontally),
-                modifier = Modifier.padding(bottom = 30.dp)
+                modifier = Modifier
+                    .padding(bottom = 30.dp)
                     .fillMaxWidth()
         ) { //handle the UI of the calendar
             items(count = 7) { index ->
@@ -183,17 +188,18 @@ fun HabitStreak() {
             }
         }
     }
+
 }
 
 @Composable
-fun HandleHabitsMenu(habitsArrayList:ArrayList<HabitModel>?,onDismiss: () -> Unit){ // UI of the habits list available to add to the user's habit list
+fun AddHabitsToMenu(habitsArrayList:ArrayList<HabitModel>?,onDismiss: () -> Unit){ // UI of the habits list available to add to the user's habit list
     if(habitsArrayList == null){
         Toast.makeText(LocalContext.current,"Empty database",Toast.LENGTH_LONG).show()
         return
     }
     Box(
         modifier = Modifier
-            .background(Color.Transparent)
+            .background(DarkTransparent)
             .fillMaxSize()
             .clickable(
                 onClick = { onDismiss() }
@@ -204,9 +210,8 @@ fun HandleHabitsMenu(habitsArrayList:ArrayList<HabitModel>?,onDismiss: () -> Uni
                 defaultElevation = 10.dp
             ),
             modifier = Modifier
-                .fillMaxHeight(0.8f)
-                .fillMaxWidth()
-                .align(Alignment.BottomCenter),
+                .align(Alignment.BottomCenter)
+                .fillMaxHeight(0.8f),
 
             shape = RoundedCornerShape(35.dp, 35.dp),
             colors = CardDefaults.cardColors(
@@ -237,8 +242,7 @@ fun HandleHabitsMenu(habitsArrayList:ArrayList<HabitModel>?,onDismiss: () -> Uni
 
                         Button(
                             onClick = {
-
-                            },
+                                              },
                             modifier = Modifier.padding(end = 20.dp)
 
                         ) {
@@ -254,7 +258,20 @@ fun HandleHabitsMenu(habitsArrayList:ArrayList<HabitModel>?,onDismiss: () -> Uni
         }
     }
 }
+@Composable
+fun HabitMenu(){
+    LazyColumn(
+        horizontalAlignment = Alignment.Start
+    ) {
+        items(5){
+            Card(){
+                Text("here")
+            }
+        }
 
+    }
+
+}
 
 
 @Preview(showSystemUi = true)
@@ -276,14 +293,14 @@ object MockDataProvider {
             defaultHabit = true,
             creationDate = "2024-03-11",
             recalDate = null,
-            pickedUp=true
+            pickedUp=false
         ),
         HabitModel(
             habitName = "Workout",
             defaultHabit = true,
             creationDate = "2024-03-11",
             recalDate = null,
-            pickedUp=true
+            pickedUp=false
 
         ),
         HabitModel(
@@ -291,7 +308,7 @@ object MockDataProvider {
             defaultHabit = true,
             creationDate = "2024-03-11",
             recalDate = null,
-            pickedUp=true
+            pickedUp=false
 
         ),
         HabitModel(
@@ -299,7 +316,7 @@ object MockDataProvider {
             defaultHabit = true,
             creationDate = "2024-03-11",
             recalDate = null,
-            pickedUp=true
+            pickedUp=false
 
         )
     )
