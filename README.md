@@ -4,5 +4,5 @@ Simple app in order to track habits of the user
 *
 ## How to launch
 *
-## Images
-*
+## Video
+![Uploading appDemo.gif…]()
