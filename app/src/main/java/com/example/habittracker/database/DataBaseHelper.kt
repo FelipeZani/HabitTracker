@@ -43,7 +43,7 @@ class DataBaseHelper(context: Context?) : SQLiteOpenHelper(context, DB_NAME, nul
         addNewHabit("Drink Water",true,currentDate(),null,false,db)
         addNewHabit("Workout",true,currentDate(),null,false,db)
         addNewHabit("Read a book",true,currentDate(),null,false,db)
-        addNewHabit("Study",true,currentDate(),null,false,db)
+        addNewHabit("Review",true,currentDate(),null,false,db)
 
     }
 
@@ -55,7 +55,7 @@ class DataBaseHelper(context: Context?) : SQLiteOpenHelper(context, DB_NAME, nul
 
     companion object {
         const val DB_NAME = "HabitTrackerDB"
-        const val DB_VERSION = 2
+        const val DB_VERSION = 3
 
         // Habits Table Columns
         const val HABITS_TABLE = "habitsTable"

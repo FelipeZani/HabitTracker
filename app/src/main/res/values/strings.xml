@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">HabitTracker</string>
+    <string name="title_activity_loading_screen">LoadingScreen</string>
 </resources>
