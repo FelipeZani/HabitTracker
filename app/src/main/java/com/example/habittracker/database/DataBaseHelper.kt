@@ -5,6 +5,9 @@ import android.content.Context
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Calendar
@@ -40,10 +43,10 @@ class DataBaseHelper(context: Context?) : SQLiteOpenHelper(context, DB_NAME, nul
     }
 
     private fun insertDefaultHabits(db: SQLiteDatabase?) {
-        addNewHabit("Drink Water",true,currentDate(),null,false,db)
-        addNewHabit("Workout",true,currentDate(),null,false,db)
-        addNewHabit("Read a book",true,currentDate(),null,false,db)
-        addNewHabit("Review",true,currentDate(),null,false,db)
+        addNewHabit("Drink Water",true,currentDate(),null,db)
+        addNewHabit("Workout",true,currentDate(),null,db)
+        addNewHabit("Read a book",true,currentDate(),null,db)
+        addNewHabit("Review",true,currentDate(),null,db)
 
     }
 
@@ -73,11 +76,12 @@ class DataBaseHelper(context: Context?) : SQLiteOpenHelper(context, DB_NAME, nul
         const val DATE_ACCOMPLISHED = "dateAccomplished"
     }
     fun addNewHabit(habitsName : String,
-                     defaultHabit : Boolean = true,
-                     creationDate: String,
-                     recalDate : String?,
-                    pickedUp : Boolean = false,
-                    db: SQLiteDatabase?
+                    defaultHabit : Boolean = true,
+                    creationDate: String,
+                    recalDate : String?,
+                    db: SQLiteDatabase?,
+                    pickedUp : MutableState<Boolean> = mutableStateOf(false ),
+
     ){
         val values = ContentValues()
         if(db != null) {
@@ -85,7 +89,7 @@ class DataBaseHelper(context: Context?) : SQLiteOpenHelper(context, DB_NAME, nul
             values.put(DEFAULT_HABIT, defaultHabit)
             values.put(CREATE_AT, creationDate)
             values.put(RECALLTIME, recalDate)
-            values.put(PICKED_UP, pickedUp)
+            values.put(PICKED_UP, pickedUp.value)
 
             db.insert(HABITS_TABLE, null, values)
         }
@@ -102,21 +106,21 @@ class DataBaseHelper(context: Context?) : SQLiteOpenHelper(context, DB_NAME, nul
         }
 
     }
-    fun readHabits() : ArrayList<HabitModel>?{
+    fun readHabits() : MutableList<HabitModel>{
         val db = this.readableDatabase
 
         val cursorHabits : Cursor = db.rawQuery("SELECT * FROM  $HABITS_TABLE",null)
 
-        val habitModelArrayList : ArrayList<HabitModel> = ArrayList()
+        val habitModelList = mutableStateListOf<HabitModel>()
         if(cursorHabits.moveToFirst()){
             do {
-                habitModelArrayList.add(
+                habitModelList.add(
                     HabitModel(
                         cursorHabits.getString(1),
                         cursorHabits.getInt(2) == 1,
                         cursorHabits.getString(3),
                         cursorHabits.getString(4),
-                        cursorHabits.getInt(5)==1
+                        mutableStateOf( cursorHabits.getInt(5)==1)
 
                     )
 
@@ -125,7 +129,7 @@ class DataBaseHelper(context: Context?) : SQLiteOpenHelper(context, DB_NAME, nul
         }
 
         cursorHabits.close()
-        return habitModelArrayList
+        return habitModelList
     }
 
 }

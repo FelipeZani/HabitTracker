@@ -54,6 +54,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -78,7 +79,7 @@ import com.example.habittracker.ui.theme.GoldenBell
 import com.example.habittracker.ui.theme.HabitTrackerTheme
 
 class MainActivity : ComponentActivity() {
-    val databaseHabits : DataBaseHelper = DataBaseHelper(this)
+    val  databaseHabits : DataBaseHelper = DataBaseHelper(this)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -98,9 +99,9 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun ContentApp(habitsData: ArrayList<HabitModel>?){ //Whole content in the scaffold is stored here, Ui and Ux
-    var isAddHabitsMenuVisible  by remember { mutableStateOf(false) }
-    var habitsOnMenu  = remember { mutableStateOf(ArrayList<HabitModel>()) }
+fun ContentApp(habitsData: MutableList<HabitModel>?){ //Whole content in the scaffold is stored here, Ui and Ux
+    var isAddHabitsMenuVisible  by remember { mutableStateOf(true) }
+    val habitsOnMenu  = remember { mutableStateListOf<HabitModel>()}
 
     Scaffold(
         modifier = Modifier.fillMaxSize(), //main container of the app
@@ -123,14 +124,11 @@ fun ContentApp(habitsData: ArrayList<HabitModel>?){ //Whole content in the scaff
             .fillMaxWidth(),
         ) {
             HabitStreak()
-            HabitMenu(habitsOnMenu.value)
+            HabitMenu(habitsOnMenu)
 
         }
         if(isAddHabitsMenuVisible){
-            AddHabitsToMenu(
-                habitsData,onDismiss = {isAddHabitsMenuVisible = false},
-                habitsOnMenu.value
-            )
+            AddHabitsToMenu(habitsData, onDismiss = {isAddHabitsMenuVisible = false}, habitsOnMenu)
 
         }
     }
@@ -211,8 +209,8 @@ fun HabitStreak() {
 }
 
 @Composable
-fun AddHabitsToMenu(habitsArrayList:ArrayList<HabitModel>?,onDismiss: () -> Unit, habitsOnMenu : ArrayList<HabitModel>){ // UI of the habits list available to add to the user's habit list
-
+fun AddHabitsToMenu(habitsArrayList:MutableList<HabitModel>?,onDismiss: () -> Unit, habitsOnMenu : MutableList<HabitModel>){
+    // UI of the habits list available to add to the user's habit list
     if(habitsArrayList == null){
         Toast.makeText(LocalContext.current,"Empty database",Toast.LENGTH_LONG).show()
         return
@@ -248,6 +246,7 @@ fun AddHabitsToMenu(habitsArrayList:ArrayList<HabitModel>?,onDismiss: () -> Unit
                     .fillMaxWidth()
                 ) {
                 items(habitsArrayList.size){ index->
+                    val habitItem = habitsArrayList[index]
                     Row(
                         modifier = Modifier
                             .wrapContentWidth()
@@ -259,22 +258,22 @@ fun AddHabitsToMenu(habitsArrayList:ArrayList<HabitModel>?,onDismiss: () -> Unit
                             ),
                     ) {
                         Text(
-                            habitsArrayList[index].habitName,
+                            habitItem.habitName,
                             fontSize = 20.sp,
                             modifier = Modifier.weight(0.5f)
                         )
                         Button(
                             onClick = {
-                                if(habitsArrayList[index].pickedUp){
+                                if(habitItem.pickedUp.value){
 
-                                    habitsArrayList[index].pickedUp = !habitsArrayList[index].pickedUp
-                                    habitsOnMenu.remove(habitsArrayList[index])
+                                    habitItem.pickedUp.value = !habitItem.pickedUp.value
+                                    habitsOnMenu.remove(habitItem)
                                     habitsStatusText = "Add"
 
                                 }else {
 
-                                    habitsArrayList[index].pickedUp = !habitsArrayList[index].pickedUp
-                                    habitsOnMenu.add(habitsArrayList[index])
+                                    habitItem.pickedUp.value = !habitItem.pickedUp.value
+                                    habitsOnMenu.add(habitItem)
                                     habitsStatusText = "Remove"
 
                                 }
@@ -285,7 +284,7 @@ fun AddHabitsToMenu(habitsArrayList:ArrayList<HabitModel>?,onDismiss: () -> Unit
 
 
                         ) {
-                            habitsStatusText = if(habitsArrayList[index].pickedUp) "Remove" else "Add"
+                            habitsStatusText = if(habitItem.pickedUp.value) "Remove" else "Add"
                             Text(
                                 text = habitsStatusText,
                             )
@@ -293,24 +292,47 @@ fun AddHabitsToMenu(habitsArrayList:ArrayList<HabitModel>?,onDismiss: () -> Unit
                         }
                     }
                 }
+            item{
+                Row(
+                    modifier = Modifier.fillMaxWidth()
+                        .padding(top=20.dp),
+                    horizontalArrangement = Arrangement.Center
+
+                ) {
+                    Button(
+                        onClick = {}
+                    ) {
+                        Text("Add a new Habit")
+                    }
+                }
+            }
+
             }
 
         }
     }
 }
 @Composable
-fun HabitMenu(habitsOnMenu: ArrayList<HabitModel>?) {
+fun HabitMenu(habitsOnMenu: MutableList<HabitModel>?) {
     if (!habitsOnMenu.isNullOrEmpty()) {
         // Maintain a map of each habit's ID to its tint color
-        val tintValues = remember {
+        val accomplishedTintValues = remember {
             mutableStateMapOf<HabitModel, Color>().apply {
                 habitsOnMenu.forEach { habit ->
                     put(habit, Color.Black) // Initialize all items with black color
                 }
             }
         }
-        var bellColor : Color by remember{ mutableStateOf(Color.Black) }
+        val notificationBellTint = remember {
+            mutableStateMapOf<HabitModel,Color>().apply {
+                habitsOnMenu.forEach {
+                    habit->
+                    put(habit, Color.Black)
+                }
 
+            }
+
+        }
         LazyColumn(
             horizontalAlignment = Alignment.Start,
             verticalArrangement = Arrangement.spacedBy(30.dp)
@@ -337,25 +359,32 @@ fun HabitMenu(habitsOnMenu: ArrayList<HabitModel>?) {
                         Icon(
                             imageVector = Icons.Default.Notifications,
                             contentDescription = "Turn notifications On/Off",
-                            tint = if (bellColor == Color.Black) Color.Black else GoldenBell,
+                            tint = notificationBellTint[habit] ?: Color.Black,
                             modifier = Modifier
                                 .size(25.dp)
                                 .clickable {
-                                    bellColor = if (bellColor == Color.Black) GoldenBell else Color.Black
+                                    notificationBellTint[habit] =
+                                        if (notificationBellTint[habit] == Color.Black) {
+                                            GoldenBell
+                                        } else {
+                                            Color.Black
+                                        }
                                 }
+
                         )
                         Icon(
                             Icons.Default.Check,
                             contentDescription = "Controlling Habit",
-                            tint = tintValues[habit] ?: Color.Black,
+                            tint = accomplishedTintValues[habit] ?: Color.Black,
                             modifier = Modifier
                                 .size(25.dp)
                                 .clickable {
-                                    tintValues[habit] = if (tintValues[habit] == Color.Black) {
-                                        Color.Green
-                                    } else {
-                                        Color.Black
-                                    }
+                                    accomplishedTintValues[habit] =
+                                        if (accomplishedTintValues[habit] == Color.Black) {
+                                            Color.Green
+                                        } else {
+                                            Color.Black
+                                        }
                                 }
                         )
                     }
@@ -400,14 +429,14 @@ object MockDataProvider {
             defaultHabit = true,
             creationDate = "2024-03-11",
             recalDate = null,
-            pickedUp=false
+            pickedUp= mutableStateOf(false)
         ),
         HabitModel(
             habitName = "Workout",
             defaultHabit = true,
             creationDate = "2024-03-11",
             recalDate = null,
-            pickedUp=false
+            pickedUp=mutableStateOf(false)
 
         ),
         HabitModel(
@@ -415,7 +444,7 @@ object MockDataProvider {
             defaultHabit = true,
             creationDate = "2024-03-11",
             recalDate = null,
-            pickedUp=true
+            pickedUp=mutableStateOf(true)
 
         ),
         HabitModel(
@@ -423,7 +452,7 @@ object MockDataProvider {
             defaultHabit = true,
             creationDate = "2024-03-11",
             recalDate = null,
-            pickedUp=true
+            pickedUp=mutableStateOf(true)
 
         )
     )
@@ -435,7 +464,7 @@ object MockPUPHabits{
             defaultHabit = true,
             creationDate = "2024-03-11",
             recalDate = null,
-            pickedUp=true
+            pickedUp=mutableStateOf(true)
 
         ),
         HabitModel(
@@ -443,7 +472,7 @@ object MockPUPHabits{
             defaultHabit = true,
             creationDate = "2024-03-11",
             recalDate = null,
-            pickedUp=true
+            pickedUp=mutableStateOf(true)
 
         ),
         HabitModel(
@@ -451,7 +480,7 @@ object MockPUPHabits{
             defaultHabit = true,
             creationDate = "2024-03-11",
             recalDate = null,
-            pickedUp=true
+            pickedUp= mutableStateOf(true)
 
         )
 
