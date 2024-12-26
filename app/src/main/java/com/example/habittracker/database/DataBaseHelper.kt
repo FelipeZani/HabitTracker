@@ -8,9 +8,8 @@ import android.database.sqlite.SQLiteOpenHelper
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
-import java.util.Calendar
+import com.example.habittracker.CalendarManagement
+
 
 class DataBaseHelper(context: Context?) : SQLiteOpenHelper(context, DB_NAME, null, DB_VERSION) {
 
@@ -43,10 +42,11 @@ class DataBaseHelper(context: Context?) : SQLiteOpenHelper(context, DB_NAME, nul
     }
 
     private fun insertDefaultHabits(db: SQLiteDatabase?) {
-        addNewHabit("Drink Water",true,currentDate(),null,db)
-        addNewHabit("Workout",true,currentDate(),null,db)
-        addNewHabit("Read a book",true,currentDate(),null,db)
-        addNewHabit("Review",true,currentDate(),null,db)
+        val habitCreationDate = CalendarManagement()
+        addNewHabit("Drink Water",true,habitCreationDate.getCurentDate(),null,db)
+        addNewHabit("Workout",true,habitCreationDate.getCurentDate(),null,db)
+        addNewHabit("Read a book",true,habitCreationDate.getCurentDate(),null,db)
+        addNewHabit("Review",true,habitCreationDate.getCurentDate(),null,db)
 
     }
 
@@ -134,12 +134,4 @@ class DataBaseHelper(context: Context?) : SQLiteOpenHelper(context, DB_NAME, nul
 
 }
 
-fun currentDate():String{
-    val date = LocalDate.now()
-    val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
-    val formattedDate = date.format(formatter).toString()
-
-    return formattedDate
-
-}
 

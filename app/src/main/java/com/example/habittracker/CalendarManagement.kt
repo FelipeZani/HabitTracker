@@ -1,7 +1,7 @@
 package com.example.habittracker
 
-import java.time.DayOfWeek
 import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
 
@@ -27,6 +27,14 @@ class CalendarManagement {
                 .replaceFirstChar { it.uppercaseChar() })
         }
         return wholeweek
+    }
+    fun getCurentDate():String{
+        val date = LocalDate.now()
+        val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+        val formattedDate = date.format(formatter).toString()
+
+        return formattedDate
+
     }
 
     // Function to update the current date based on arrow click
