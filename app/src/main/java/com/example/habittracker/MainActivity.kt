@@ -38,6 +38,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -49,8 +50,11 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -58,6 +62,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -77,6 +82,11 @@ import com.example.habittracker.ui.theme.BlueRoyal
 import com.example.habittracker.ui.theme.DarkTransparent
 import com.example.habittracker.ui.theme.GoldenBell
 import com.example.habittracker.ui.theme.HabitTrackerTheme
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import kotlin.system.exitProcess
 
 class MainActivity : ComponentActivity() {
     val  databaseHabits : DataBaseHelper = DataBaseHelper(this)
@@ -100,10 +110,17 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun ContentApp(habitsData: MutableList<HabitModel>?){ //Whole content in the scaffold is stored here, Ui and Ux
+
     var isAddHabitsMenuVisible  by remember { mutableStateOf(true) }
+
     val habitsOnMenu  = remember { mutableStateListOf<HabitModel>()}
 
+    val snackBarHostState = remember { SnackbarHostState() }
+
+    val scope = rememberCoroutineScope()
+
     Scaffold(
+        snackbarHost = { SnackbarHost(snackBarHostState) },
         modifier = Modifier.fillMaxSize(), //main container of the app
         floatingActionButton = {
             FloatingActionButton(
@@ -118,6 +135,7 @@ fun ContentApp(habitsData: MutableList<HabitModel>?){ //Whole content in the sca
 
     ) {
         innerPadding ->
+
         Column(modifier = Modifier
             .padding(innerPadding)
             .padding(16.dp)
@@ -128,7 +146,7 @@ fun ContentApp(habitsData: MutableList<HabitModel>?){ //Whole content in the sca
 
         }
         if(isAddHabitsMenuVisible){
-            AddHabitsToMenu(habitsData, onDismiss = {isAddHabitsMenuVisible = false}, habitsOnMenu)
+            AddHabitsToMenu(habitsData, onDismiss = {isAddHabitsMenuVisible = false}, habitsOnMenu,scope,snackBarHostState)
 
         }
     }
@@ -209,9 +227,9 @@ fun HabitStreak() {
 }
 
 @Composable
-fun AddHabitsToMenu(habitsArrayList:MutableList<HabitModel>?,onDismiss: () -> Unit, habitsOnMenu : MutableList<HabitModel>){
+fun AddHabitsToMenu(habitsList:MutableList<HabitModel>?,onDismiss: () -> Unit, habitsOnMenu : MutableList<HabitModel>, scope: CoroutineScope,snackBarHostState : SnackbarHostState){
     // UI of the habits list available to add to the user's habit list
-    if(habitsArrayList == null){
+    if(habitsList == null){
         Toast.makeText(LocalContext.current,"Empty database",Toast.LENGTH_LONG).show()
         return
     }
@@ -245,8 +263,8 @@ fun AddHabitsToMenu(habitsArrayList:MutableList<HabitModel>?,onDismiss: () -> Un
                     .padding(top = 30.dp)
                     .fillMaxWidth()
                 ) {
-                items(habitsArrayList.size){ index->
-                    val habitItem = habitsArrayList[index]
+                items(habitsList.size){ index->
+                    val habitItem = habitsList[index]
                     Row(
                         modifier = Modifier
                             .wrapContentWidth()
@@ -290,21 +308,12 @@ fun AddHabitsToMenu(habitsArrayList:MutableList<HabitModel>?,onDismiss: () -> Un
                             )
 
                         }
-                    }
-                }
-            item{
-                Row(
-                    modifier = Modifier.fillMaxWidth()
-                        .padding(top=20.dp),
-                    horizontalArrangement = Arrangement.Center
 
-                ) {
-                    Button(
-                        onClick = {}
-                    ) {
-                        Text("Add a new Habit")
                     }
                 }
+
+            item{
+                CreateCustomHabit( habitsList,scope,snackBarHostState)
             }
 
             }
@@ -409,6 +418,104 @@ fun HabitMenu(habitsOnMenu: MutableList<HabitModel>?) {
     }
 }
 
+fun checkNameValue(hName : String, scope: CoroutineScope, snackBarHostState: SnackbarHostState): Boolean{
+
+    val regex = Regex("[a-zA-Z0-9 ]{2,20}")
+
+    val isHabitNameValid = regex.matches(hName)
+
+    if(isHabitNameValid){
+        scope.launch { snackBarHostState.showSnackbar("Your new habit was added successfully") }
+    }else if(hName.isEmpty()){
+        scope.launch { snackBarHostState.showSnackbar("Habit's name can't be empty") }
+
+    }else if (hName.length>20){
+        scope.launch { snackBarHostState.showSnackbar("Habit's name can't exceed 20 characters") }
+
+    }
+    else
+    {
+        scope.launch{snackBarHostState.showSnackbar("Only alpha numeric values are excepted")}
+    }
+    return isHabitNameValid
+
+}
+
+@Composable
+fun CreateCustomHabit(habitsList: MutableList<HabitModel>?, scope: CoroutineScope, snackBarHostState:SnackbarHostState){
+    var isAddCustomHabitButtonOn by remember { mutableStateOf(false) }
+    var isHabitNameValid by remember { mutableStateOf(false) }
+    if(!habitsList.isNullOrEmpty()) {
+        if (isAddCustomHabitButtonOn) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 20.dp),
+                horizontalArrangement = Arrangement.Center
+
+            ) {
+                Button(
+                    onClick = {
+                        isAddCustomHabitButtonOn = !isAddCustomHabitButtonOn
+                    }
+                ) {
+                    Text(text = "Add a new Habit")
+                }
+            }
+        } else {
+            var hName by remember { mutableStateOf("") }
+            Row(
+                modifier = Modifier
+                    .padding(start = 20.dp)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() }, // Prevent ripple effect
+                        indication = null, // Remove visual feedback
+                        onClick = { /* Do nothing, just consume the click */ }
+                    ),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                TextField(
+                    value = hName,
+                    onValueChange = { hName = it },
+                    maxLines = 1,
+                    modifier = Modifier
+                        .fillMaxWidth(0.68f)
+                        .padding(top = 10.dp),
+
+                    label = { Text(text = "Your Habit name") },
+                )
+                Icon(Icons.Default.Close, contentDescription = "Cancel bottom",
+                    modifier = Modifier
+                        .padding(start = 20.dp, end = 20.dp)
+                        .clickable { isAddCustomHabitButtonOn = !isAddCustomHabitButtonOn })
+                Icon(Icons.Default.Check, contentDescription = "Confirm bottom",
+                    modifier = Modifier.clickable {
+                        isHabitNameValid = checkNameValue(hName, scope, snackBarHostState)
+
+
+                    }
+
+                )
+                if (isHabitNameValid) {
+                    val newHabit = HabitModel(hName, false, "01/01/2001", null)
+                    hName=""
+                    habitsList.add(newHabit)
+                    Toast.makeText(LocalContext.current,"size of habits${habitsList.size}", Toast.LENGTH_LONG).show()
+
+                }
+            }
+
+
+        }
+    }else{
+        Toast.makeText(LocalContext.current,"HabitsList null or empty", Toast.LENGTH_LONG).show()
+        exitProcess(70)
+
+    }
+}
+
+
+
 
 @Preview(showSystemUi = true)
 @Composable
@@ -417,6 +524,7 @@ fun ShowContentPreview() {
 
     HabitTrackerTheme {
         ContentApp(MockDataProvider.getMockHabits())
+
         //HabitMenu(MockPUPHabits.getPUPMockHabits())
     }
 }
