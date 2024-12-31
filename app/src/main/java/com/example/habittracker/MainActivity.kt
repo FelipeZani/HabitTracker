@@ -9,8 +9,11 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -89,22 +92,34 @@ import kotlinx.coroutines.launch
 import kotlin.system.exitProcess
 
 class MainActivity : ComponentActivity() {
-    val  databaseHabits : DataBaseHelper = DataBaseHelper(this)
+
+    private val databaseHabits : DataBaseHelper = DataBaseHelper(context=this)
+    private lateinit var habitsList :MutableList<HabitModel>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        habitsList = databaseHabits.readHabits()
+
         setContent {
             HabitTrackerTheme {
-                ContentApp(databaseHabits.readHabits())
+                ContentApp(habitsList)
 
             }
         }
 
     }
-    override fun onDestroy() {
-        super.onDestroy()
-        databaseHabits.close() // Closes the database when the activity is destroyed
+
+    override fun onPause() {
+        super.onPause()
+        databaseHabits.updateDb(habitsList)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        habitsList = databaseHabits.readHabits()
+
     }
 }
 
@@ -226,6 +241,7 @@ fun HabitStreak() {
 
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun AddHabitsToMenu(habitsList:MutableList<HabitModel>?,onDismiss: () -> Unit, habitsOnMenu : MutableList<HabitModel>, scope: CoroutineScope,snackBarHostState : SnackbarHostState){
     // UI of the habits list available to add to the user's habit list
@@ -235,7 +251,15 @@ fun AddHabitsToMenu(habitsList:MutableList<HabitModel>?,onDismiss: () -> Unit, h
     }
 
     var habitsStatusText by remember { mutableStateOf("Add")}
+    var displayRemoveOption = remember {
+        mutableStateMapOf<HabitModel, Boolean>().apply {
+            habitsOnMenu.forEach { habit ->
+                 put(habit, false)
 
+            }
+        }
+
+    }
     Box(
         modifier = Modifier
             .background(DarkTransparent)
@@ -265,50 +289,78 @@ fun AddHabitsToMenu(habitsList:MutableList<HabitModel>?,onDismiss: () -> Unit, h
                 ) {
                 items(habitsList.size){ index->
                     val habitItem = habitsList[index]
-                    Row(
-                        modifier = Modifier
-                            .wrapContentWidth()
-                            .padding(start = 20.dp)
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() }, // Prevent ripple effect
-                                indication = null, // Remove visual feedback
-                                onClick = { /* Do nothing, just consume the click */ }
-                            ),
+                    Box(
                     ) {
-                        Text(
-                            habitItem.habitName,
-                            fontSize = 20.sp,
-                            modifier = Modifier.weight(0.5f)
-                        )
-                        Button(
-                            onClick = {
-                                if(habitItem.pickedUp.value){
-
-                                    habitItem.pickedUp.value = !habitItem.pickedUp.value
-                                    habitsOnMenu.remove(habitItem)
-                                    habitsStatusText = "Add"
-
-                                }else {
-
-                                    habitItem.pickedUp.value = !habitItem.pickedUp.value
-                                    habitsOnMenu.add(habitItem)
-                                    habitsStatusText = "Remove"
-
-                                }
-                            },
+                        Row(
                             modifier = Modifier
-                                .padding(end = 20.dp)
-                                .weight(0.24f)
-
-
+                                .wrapContentWidth()
+                                .padding(start = 20.dp)
+                                .combinedClickable(
+                                    onClick = {
+                                        // Handle click
+                                    },
+                                    onLongClick = {
+                                        if(!habitItem.defaultHabit){
+                                            displayRemoveOption[habitItem]=true
+                                        }
+                                    }
+                                ),
                         ) {
-                            habitsStatusText = if(habitItem.pickedUp.value) "Remove" else "Add"
                             Text(
-                                text = habitsStatusText,
+                                habitItem.habitName,
+                                fontSize = 20.sp,
+                                modifier = Modifier.weight(0.5f)
                             )
+                            Button(
+                                onClick = {
+                                    if (habitItem.pickedUp.value) {
+
+                                        habitItem.pickedUp.value = !habitItem.pickedUp.value
+                                        habitsOnMenu.remove(habitItem)
+                                        habitsStatusText = "Add"
+
+                                    } else {
+
+                                        habitItem.pickedUp.value = !habitItem.pickedUp.value
+                                        habitsOnMenu.add(habitItem)
+                                        habitsStatusText = "Remove"
+
+                                    }
+                                },
+                                modifier = Modifier
+                                    .padding(end = 20.dp)
+                                    .weight(0.24f)
+
+
+                            ) {
+                                habitsStatusText = if (habitItem.pickedUp.value) "Remove" else "Add"
+                                Text(
+                                    text = habitsStatusText,
+                                )
+
+                            }
 
                         }
+                        if(displayRemoveOption[habitItem]==true){
+                            Surface(
+                                color= BlueRoyal,
+                                modifier = Modifier.wrapContentWidth()
+                                    .padding(start=150.dp)
+                                    .clickable {
+                                        habitsList.remove(habitItem)
+                                    },
+                                shape= RoundedCornerShape(5.dp)
+                                ,
+                                contentColor = Color.White,
+                            ) {
+                                Text(
+                                    text="Remove",
+                                    fontSize = 20.sp,
+                                    modifier = Modifier.padding(1.dp)
 
+                                )
+                            }
+                        }
                     }
                 }
 
@@ -491,18 +543,18 @@ fun CreateCustomHabit(habitsList: MutableList<HabitModel>?, scope: CoroutineScop
                 Icon(Icons.Default.Check, contentDescription = "Confirm bottom",
                     modifier = Modifier.clickable {
                         isHabitNameValid = checkNameValue(hName, scope, snackBarHostState)
+                        if (isHabitNameValid) {
+                            val currDate = CalendarManagement()
+                            val newHabit = HabitModel(hName, false, currDate.getCurentDate(), null)
+                            hName=""
+                            habitsList.add(newHabit)
 
+                        }
 
                     }
 
                 )
-                if (isHabitNameValid) {
-                    val newHabit = HabitModel(hName, false, "01/01/2001", null)
-                    hName=""
-                    habitsList.add(newHabit)
-                    Toast.makeText(LocalContext.current,"size of habits${habitsList.size}", Toast.LENGTH_LONG).show()
 
-                }
             }
 
 

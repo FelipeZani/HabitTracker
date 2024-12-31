@@ -58,7 +58,7 @@ class DataBaseHelper(context: Context?) : SQLiteOpenHelper(context, DB_NAME, nul
 
     companion object {
         const val DB_NAME = "HabitTrackerDB"
-        const val DB_VERSION = 3
+        const val DB_VERSION = 4
 
         // Habits Table Columns
         const val HABITS_TABLE = "habitsTable"
@@ -80,7 +80,7 @@ class DataBaseHelper(context: Context?) : SQLiteOpenHelper(context, DB_NAME, nul
                     creationDate: String,
                     recalDate : String?,
                     db: SQLiteDatabase?,
-                    pickedUp : MutableState<Boolean> = mutableStateOf(false ),
+                    pickedUp : MutableState<Boolean> = mutableStateOf(false),
 
     ){
         val values = ContentValues()
@@ -94,8 +94,55 @@ class DataBaseHelper(context: Context?) : SQLiteOpenHelper(context, DB_NAME, nul
             db.insert(HABITS_TABLE, null, values)
         }
     }
+
+    fun removeHabit(habitName : String,
+                    db: SQLiteDatabase?
+                    ){
+        if(db != null) {
+            val whereClause = "$HABIT_NAME = ?"
+            db.delete(HABITS_TABLE, whereClause, arrayOf(habitName))
+        }
+    }
+
+
+
+    fun updateDb(habitsList : MutableList<HabitModel>){
+        val db = this.writableDatabase
+
+        if(db!= null) {
+            try {
+                val existingHabits = readHabits()
+
+                habitsList.forEach { newHabit ->
+                    if (!checkHabitsExist(newHabit.habitName, db)) {
+                        addNewHabit(
+                            newHabit.habitName,
+                            newHabit.defaultHabit,
+                            newHabit.creationDate,
+                            newHabit.recalDate,
+                            db,
+                            newHabit.pickedUp
+                        )
+                    }
+                }
+                existingHabits.forEach {
+                    oldHabit ->
+                    if (!habitsList.contains(oldHabit) && !oldHabit.defaultHabit) {
+                        removeHabit(oldHabit.habitName, db)
+                    }
+                }
+
+
+            } finally {
+                db.close()
+            }
+        }
+
+    }
+
+
     fun addNewStreak( db:SQLiteDatabase?,
-        dateAcomplieshed : String?
+                      dateAcomplieshed : String?
     ){
         val values = ContentValues()
         if(db != null) {
@@ -106,6 +153,19 @@ class DataBaseHelper(context: Context?) : SQLiteOpenHelper(context, DB_NAME, nul
         }
 
     }
+    fun checkHabitsExist(habitName : String, db: SQLiteDatabase?):Boolean{
+        if(db != null) {
+            val query = "SELECT COUNT(*) FROM $HABITS_TABLE WHERE $HABIT_NAME=?"
+            val cursor = db.rawQuery(query, arrayOf(habitName))
+            cursor.use {
+                it.moveToFirst()
+                return it.getInt(0) > 0
+            }
+        }
+        return false
+
+    }
+
     fun readHabits() : MutableList<HabitModel>{
         val db = this.readableDatabase
 
