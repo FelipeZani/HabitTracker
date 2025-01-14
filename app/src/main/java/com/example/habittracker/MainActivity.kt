@@ -100,7 +100,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        habitsList = databaseHabits.readHabits()
+        habitsList = databaseHabits.readHabits()?: throw NullPointerException()
 
         setContent {
             HabitTrackerTheme {
@@ -124,15 +124,23 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun ContentApp(habitsData: MutableList<HabitModel>?){ //Whole content in the scaffold is stored here, Ui and Ux
+fun ContentApp(habitsData: MutableList<HabitModel>){ //Whole content in the scaffold is stored here, Ui and Ux
 
-    var isAddHabitsMenuVisible  by remember { mutableStateOf(true) }
+
+    var isAddHabitsMenuVisible  by remember { mutableStateOf(false) }
 
     val habitsOnMenu  = remember { mutableStateListOf<HabitModel>()}
 
     val snackBarHostState = remember { SnackbarHostState() }
 
     val scope = rememberCoroutineScope()
+
+    habitsData.forEach {
+        habit->
+        if(habit.pickedUp.value && !habitsOnMenu.contains(habit)){
+            habitsOnMenu.add(habit)
+        }
+    }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackBarHostState) },
@@ -251,7 +259,7 @@ fun AddHabitsToMenu(habitsList:MutableList<HabitModel>?,onDismiss: () -> Unit, h
     }
 
     var habitsStatusText by remember { mutableStateOf("Add")}
-    var displayRemoveOption = remember {
+    val displayRemoveOption = remember {
         mutableStateMapOf<HabitModel, Boolean>().apply {
             habitsOnMenu.forEach { habit ->
                  put(habit, false)
@@ -300,8 +308,8 @@ fun AddHabitsToMenu(habitsList:MutableList<HabitModel>?,onDismiss: () -> Unit, h
                                         // Handle click
                                     },
                                     onLongClick = {
-                                        if(!habitItem.defaultHabit){
-                                            displayRemoveOption[habitItem]=true
+                                        if (!habitItem.defaultHabit) {
+                                            displayRemoveOption[habitItem] = true
                                         }
                                     }
                                 ),
@@ -322,8 +330,10 @@ fun AddHabitsToMenu(habitsList:MutableList<HabitModel>?,onDismiss: () -> Unit, h
                                     } else {
 
                                         habitItem.pickedUp.value = !habitItem.pickedUp.value
-                                        habitsOnMenu.add(habitItem)
-                                        habitsStatusText = "Remove"
+                                        if(!habitsOnMenu.contains(habitItem)) {
+                                            habitsOnMenu.add(habitItem)
+                                            habitsStatusText = "Remove"
+                                        }
 
                                     }
                                 },
@@ -344,10 +354,12 @@ fun AddHabitsToMenu(habitsList:MutableList<HabitModel>?,onDismiss: () -> Unit, h
                         if(displayRemoveOption[habitItem]==true){
                             Surface(
                                 color= BlueRoyal,
-                                modifier = Modifier.wrapContentWidth()
-                                    .padding(start=150.dp)
+                                modifier = Modifier
+                                    .wrapContentWidth()
+                                    .padding(start = 150.dp)
                                     .clickable {
                                         habitsList.remove(habitItem)
+                                        habitsOnMenu.remove(habitItem)
                                     },
                                 shape= RoundedCornerShape(5.dp)
                                 ,
@@ -375,7 +387,13 @@ fun AddHabitsToMenu(habitsList:MutableList<HabitModel>?,onDismiss: () -> Unit, h
 }
 @Composable
 fun HabitMenu(habitsOnMenu: MutableList<HabitModel>?) {
-    if (!habitsOnMenu.isNullOrEmpty()) {
+
+    if(habitsOnMenu == null)                    {
+        Toast.makeText(LocalContext.current,"Empty dataBase", Toast.LENGTH_LONG).show()
+        return
+    }
+
+    if (habitsOnMenu.isNotEmpty()) {
         // Maintain a map of each habit's ID to its tint color
         val accomplishedTintValues = remember {
             mutableStateMapOf<HabitModel, Color>().apply {
@@ -457,11 +475,13 @@ fun HabitMenu(habitsOnMenu: MutableList<HabitModel>?) {
             horizontalAlignment = Alignment.CenterHorizontally ,
             verticalArrangement = Arrangement.Center,
             modifier = Modifier.fillMaxHeight(0.8f)
+                .fillMaxWidth()
         ) {
             Icon(
                 painter = painterResource(id = R.drawable.iconemptyscreen),
                 contentDescription = "Open a menu to add a new habit",
-                tint = Color.Unspecified
+                tint = Color.Unspecified,
+                modifier = Modifier.align(Alignment.CenterHorizontally)
             )
             Text("Start your journey by adding a Habit",
                 fontSize = 20.sp
@@ -495,7 +515,7 @@ fun checkNameValue(hName : String, scope: CoroutineScope, snackBarHostState: Sna
 
 @Composable
 fun CreateCustomHabit(habitsList: MutableList<HabitModel>?, scope: CoroutineScope, snackBarHostState:SnackbarHostState){
-    var isAddCustomHabitButtonOn by remember { mutableStateOf(false) }
+    var isAddCustomHabitButtonOn by remember { mutableStateOf(true) }
     var isHabitNameValid by remember { mutableStateOf(false) }
     if(!habitsList.isNullOrEmpty()) {
         if (isAddCustomHabitButtonOn) {
@@ -589,7 +609,7 @@ object MockDataProvider {
             defaultHabit = true,
             creationDate = "2024-03-11",
             recalDate = null,
-            pickedUp= mutableStateOf(false)
+            pickedUp= mutableStateOf(true)
         ),
         HabitModel(
             habitName = "Workout",
@@ -604,7 +624,7 @@ object MockDataProvider {
             defaultHabit = true,
             creationDate = "2024-03-11",
             recalDate = null,
-            pickedUp=mutableStateOf(true)
+            pickedUp=mutableStateOf(false)
 
         ),
         HabitModel(
@@ -612,7 +632,7 @@ object MockDataProvider {
             defaultHabit = true,
             creationDate = "2024-03-11",
             recalDate = null,
-            pickedUp=mutableStateOf(true)
+            pickedUp=mutableStateOf(false)
 
         )
     )

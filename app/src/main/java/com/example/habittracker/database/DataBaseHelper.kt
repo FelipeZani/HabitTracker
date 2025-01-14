@@ -5,6 +5,7 @@ import android.content.Context
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
+import android.util.Log
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -107,39 +108,56 @@ class DataBaseHelper(context: Context?) : SQLiteOpenHelper(context, DB_NAME, nul
 
 
     fun updateDb(habitsList : MutableList<HabitModel>){
-        val db = this.writableDatabase
+        val db = this.writableDatabase ?: throw NullPointerException()
 
-        if(db!= null) {
-            try {
-                val existingHabits = readHabits()
+        try {
+            val existingHabits = readCustomHabits()
 
-                habitsList.forEach { newHabit ->
-                    if (!checkHabitsExist(newHabit.habitName, db)) {
-                        addNewHabit(
-                            newHabit.habitName,
-                            newHabit.defaultHabit,
-                            newHabit.creationDate,
-                            newHabit.recalDate,
-                            db,
-                            newHabit.pickedUp
-                        )
+            habitsList.forEach { newHabit ->
+                val habitIndex = getHabitId(newHabit.habitName, db)
+                if ( habitIndex < 1) { //an id starts at 1, therefore the 0 value means the habit doesn't exist in the Db, we create it
+                    addNewHabit(
+                        newHabit.habitName,
+                        newHabit.defaultHabit,
+                        newHabit.creationDate,
+                        newHabit.recalDate,
+                        db,
+                        newHabit.pickedUp
+                    )
+                    Log.v("MainActivity","${newHabit.habitName} was created in your db, better to check")
+                } else{//if a habit exists, we need to check if this habit was modified
+                    if(newHabit.pickedUp.value != getOldPickedUpState(habitIndex,db) ){
+                        updateHabitPickedValue(newHabit.pickedUp.value, habitIndex, db)
                     }
                 }
-                existingHabits.forEach {
-                    oldHabit ->
-                    if (!habitsList.contains(oldHabit) && !oldHabit.defaultHabit) {
-                        removeHabit(oldHabit.habitName, db)
-                    }
-                }
-
-
-            } finally {
-                db.close()
             }
+            existingHabits.forEach {
+                oldHabit ->
+                if (!habitsList.contains(oldHabit) && !oldHabit.defaultHabit) {
+                    removeHabit(oldHabit.habitName, db)
+                    Log.v("MainActivity","Habit deleted")
+                }
+            }
+
+
+        } finally {
+            db.close()
         }
+
 
     }
 
+    fun updateHabitPickedValue(pickedUpValue : Boolean , habitIndex : Int , db: SQLiteDatabase?){
+        val values = ContentValues().apply {
+            put(PICKED_UP, pickedUpValue)
+        }
+
+        // Updating record
+        val rowsAffected = db?.update(HABITS_TABLE, values, "$ID_COL = ?", arrayOf(habitIndex.toString())) ?: 0
+        if(rowsAffected == 0){
+            throw NullPointerException()
+        }
+    }
 
     fun addNewStreak( db:SQLiteDatabase?,
                       dateAcomplieshed : String?
@@ -153,17 +171,65 @@ class DataBaseHelper(context: Context?) : SQLiteOpenHelper(context, DB_NAME, nul
         }
 
     }
-    fun checkHabitsExist(habitName : String, db: SQLiteDatabase?):Boolean{
-        if(db != null) {
-            val query = "SELECT COUNT(*) FROM $HABITS_TABLE WHERE $HABIT_NAME=?"
-            val cursor = db.rawQuery(query, arrayOf(habitName))
-            cursor.use {
-                it.moveToFirst()
-                return it.getInt(0) > 0
+    fun getOldPickedUpState(index: Int, db: SQLiteDatabase?) : Boolean {
+
+        val query = "SELECT $PICKED_UP FROM $HABITS_TABLE WHERE $ID_COL = ?"
+
+        val cursorHabit = db?.rawQuery(query, arrayOf( index.toString())) ?: throw NullPointerException()
+
+        cursorHabit.use { cursor->
+            return if (cursor.moveToFirst()){
+                cursor.getInt(0) == 1
+            }else{
+                false
             }
         }
-        return false
 
+    }
+    fun getHabitId(habitName : String, db: SQLiteDatabase?):Int{//this fonction returns the habit index?
+        if(db == null) {
+            throw NullPointerException()
+        }
+        val query = "SELECT $ID_COL FROM $HABITS_TABLE WHERE $HABIT_NAME=?"
+        val cursor = db.rawQuery(query, arrayOf(habitName))
+        cursor.use {
+
+            return if(it.moveToFirst()) cursor.getInt(0) else 0
+        }
+    }
+
+    fun readCustomHabits() : MutableList<HabitModel>{
+
+        val habitList = mutableListOf<HabitModel>()
+
+        val db = this.readableDatabase ?: throw IllegalStateException("Database is not readable")
+
+        val customDefaultVal = 0
+
+        val query = "SELECT * FROM $HABITS_TABLE WHERE $DEFAULT_HABIT=?"
+
+        val cursorHabit = db.rawQuery(query, arrayOf(customDefaultVal.toString()))
+        try {
+            if(cursorHabit.moveToFirst()) {
+                do {
+                    habitList.add(
+                        HabitModel(
+                            cursorHabit.getString(1),
+                            cursorHabit.getInt(2) == 1,
+                            cursorHabit.getString(3),
+                            cursorHabit.getString(4),
+                            mutableStateOf( cursorHabit.getInt(5)==1)
+                        )
+                    )
+                }while (cursorHabit.moveToNext())
+            }
+        }catch (e: Exception) {
+            Log.e("DatabaseError", "Error reading custom habits", e)
+        }
+        finally {
+          cursorHabit.close()
+        }
+        return habitList
     }
 
     fun readHabits() : MutableList<HabitModel>{
